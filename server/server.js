@@ -2041,7 +2041,13 @@ if (require.main === module) {
     if (PROXY_COUNT_UNSET_LINE) console.warn(PROXY_COUNT_UNSET_LINE);
     if (PROXY_COUNT_INVALID_LINE) console.warn(PROXY_COUNT_INVALID_LINE);
 
-    server.listen(PORT, () => server.off('error', failFastOnBindError));
+    // Invalid ports throw synchronously, before an 'error' event can fire.
+    // Handle that throw through the same fail-fast path as other bind errors.
+    try {
+        server.listen(PORT, () => server.off('error', failFastOnBindError));
+    } catch (err) {
+        failFastOnBindError(err);
+    }
     initStats().catch(() => {}); // seed cachedTotal from Redis on startup
     process.on('SIGTERM', shutdown);
     process.on('SIGINT', shutdown);
