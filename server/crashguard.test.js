@@ -1834,7 +1834,7 @@ test('a PORT that Node refuses ends the process the way a taken port does', asyn
 
         const said = `PORT=${port}\n--- stderr ---\n${stderr}`;
         assert.equal(code, 1, said);
-        assert.match(stderr, /^HTTP server error: RangeError \\[ERR_SOCKET_BAD_PORT\\]/m, said);
+        assert.match(stderr, /^HTTP server error: RangeError \[ERR_SOCKET_BAD_PORT\]/m, said);
         assert.doesNotMatch(stderr, /Unhandled error/, said);
     }
 });
