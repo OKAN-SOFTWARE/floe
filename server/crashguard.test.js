@@ -1815,6 +1815,30 @@ test('a TRUSTED_PROXY_COUNT that cannot be a count trusts no proxy', async (t) =
     await assertSurvived(srv, 'two connections under a TRUSTED_PROXY_COUNT that cannot be a count');
 });
 
+// Never a word or a negative PORT here: Node reads one as a socket path.
+test('a PORT that Node refuses ends the process the way a taken port does', async () => {
+    for (const port of ['70000', '3001.5']) {
+        const child = spawn(process.execPath, [SERVER], {
+            cwd: __dirname,
+            stdio: ['ignore', 'pipe', 'pipe'],
+            env: { ...process.env, PORT: port, UPSTASH_REDIS_REST_URL: '', UPSTASH_REDIS_REST_TOKEN: '' },
+        });
+        children.add(child);
+        let stderr = '';
+        child.stderr.on('data', (d) => { stderr += d.toString(); });
+        // 'close', not 'exit', so stderr is complete; the deadline ends a hang.
+        const deadline = setTimeout(() => child.kill('SIGKILL'), 10000);
+        const code = await new Promise((resolve) => child.once('close', resolve));
+        clearTimeout(deadline);
+        children.delete(child);
+
+        const said = `PORT=${port}\n--- stderr ---\n${stderr}`;
+        assert.equal(code, 1, said);
+        assert.match(stderr, /^HTTP server error: RangeError \\[ERR_SOCKET_BAD_PORT\\]/m, said);
+        assert.doesNotMatch(stderr, /Unhandled error/, said);
+    }
+});
+
 // --- CLIENT_URL -----------------------------------------------------------------
 
 test('a CLIENT_URL written with a trailing slash still lets its own web app in', async (t) => {
